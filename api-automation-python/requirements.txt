@@ -1,0 +1,5 @@
+pytest>=8,<10
+allure-pytest>=2.13,<3
+requests>=2.32,<3
+python-dotenv>=1,<2
+

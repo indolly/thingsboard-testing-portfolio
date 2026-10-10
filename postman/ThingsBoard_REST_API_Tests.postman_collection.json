@@ -1,0 +1,1897 @@
+{
+  "info": {
+    "_postman_id": "46807741-597f-4b7c-a0af-bb80155d3db9",
+    "name": "ThingsBoard REST API Tests",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "54346267",
+    "_collection_link": "https://go.postman.co/collection/54346267-46807741-597f-4b7c-a0af-bb80155d3db9?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "01 Authentication",
+      "item": [
+        {
+          "name": "AUTH-001 Valid tenant login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"HTTP状态码为200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"响应包含非空JWT\", function () {\r\n    pm.expect(body).to.have.property(\"token\");\r\n    pm.expect(body.token).to.be.a(\"string\").and.not.empty;\r\n});\r\n\r\nif (pm.response.code === 200 && body.token) {\r\n    pm.environment.set(\"jwt\", body.token);\r\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n    \"username\":\"{{username}}\",\r\n    \"password\":\"{{password}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "AUTH-002 Invalid password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"错误密码返回401\",function(){\r\n    pm.response.to.have.status(401);\r\n});\r\n\r\npm.test(\"失败响应不包含JWT\",function(){\r\n    let body={};\r\n\r\n    try{\r\n        body=pm.response.json();\r\n    }catch(e){\r\n        body={};\r\n    }\r\n\r\n    pm.expect(body.token).to.be.undefined;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": " application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"username\": \"{{username}}\",\r\n  \"password\": \"QA_INVALID_PASSWORD_001\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "AUTH-003 Get current user",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"有效JWT返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"当前用户角色为租户管理员\", function () {\r\n    pm.expect(body.authority).to.eql(\"TENANT_ADMIN\");\r\n});\r\n\r\npm.test(\"返回的用户邮箱与环境账号一致\", function () {\r\n    pm.expect(body.email).to.eql(pm.environment.get(\"username\"));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "AUTH-004 Invalid JWT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"伪造JWT返回401\",function(){\r\n    pm.response.to.have.status(401);\r\n});\r\n\r\npm.test(\"未返回当前用户信息\",function(){\r\n    let body={};\r\n\r\n    try{\r\n        body=pm.response.json();\r\n    }catch(e){\r\n        body={};\r\n    }\r\n\r\n    pm.expect(body.authority).to.be.undefined;\r\n    pm.expect(body.email).to.be.undefined;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{invalidJwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "user"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "02 Devices",
+      "item": [
+        {
+          "name": "DEVICE-001 Search device by name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询设备返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\nconst devices = Array.isArray(body.data) ? body.data : [];\r\n\r\nconst targetDevice = devices.find(function (item) {\r\n    return item.name === \"QA_TEMP_DEVICE_001\";\r\n});\r\n\r\npm.test(\"响应data为数组\", function () {\r\n    pm.expect(body.data).to.be.an(\"array\");\r\n});\r\n\r\npm.test(\"找到目标测试设备\", function () {\r\n    pm.expect(\r\n        targetDevice,\r\n        \"响应中未找到QA_TEMP_DEVICE_001\"\r\n    ).to.exist;\r\n});\r\n\r\npm.test(\"目标设备包含非空ID\", function () {\r\n    pm.expect(\r\n        targetDevice,\r\n        \"无法读取ID，因为目标设备不存在\"\r\n    ).to.exist;\r\n\r\n    pm.expect(targetDevice.id, \"设备缺少id对象\").to.exist;\r\n    pm.expect(targetDevice.id.id).to.be.a(\"string\").and.not.empty;\r\n});\r\n\r\nif (targetDevice && targetDevice.id && targetDevice.id.id) {\r\n    pm.environment.set(\"deviceId\", targetDevice.id.id);\r\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tenant/devices?pageSize=10&page=0&textSearch=QA_TEMP_DEVICE_001&sortProperty=createdTime&sortOrder=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tenant",
+                "devices"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "textSearch",
+                  "value": "QA_TEMP_DEVICE_001"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "createdTime"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DEVICE-002 Get device by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询设备详情返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"设备名称正确\", function () {\r\n    pm.expect(body.name).to.eql(\"QA_TEMP_DEVICE_001\");\r\n});\r\n\r\npm.test(\"设备ID与环境变量一致\", function () {\r\n    pm.expect(body.id.id).to.eql(pm.environment.get(\"deviceId\"));\r\n});\r\n\r\npm.test(\"响应包含设备配置ID\", function () {\r\n    pm.expect(body.deviceProfileId).to.exist;\r\n    pm.expect(body.deviceProfileId.id).to.be.a(\"string\").and.not.empty;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/device/{{deviceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "device",
+                "{{deviceId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DEVICE-003 Device not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"不存在的设备返回404\",function(){\r\n    pm.response.to.have.status(404);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"错误响应未返回设备实体\",function(){\r\n    pm.expect(body.id).to.be.undefined;\r\n    pm.expect(body.name).to.be.undefined;\r\n});\r\n\r\npm.test(\"错误响应应包含提示信息\",function(){\r\n    pm.expect(body.message).to.be.a(\"string\").and.not.empty;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/device/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "device",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "DEVICE-004 Get device without JWT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"未认证访问返回401\", function () {\r\n    pm.response.to.have.status(401);\r\n});\r\n\r\npm.test(\"未返回设备实体\", function () {\r\n    let body = {};\r\n\r\n    try {\r\n        body = pm.response.json();\r\n    } catch (e) {\r\n        body = {};\r\n    }\r\n\r\n    pm.expect(body.id).to.be.undefined;\r\n    pm.expect(body.name).to.be.undefined;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/device/{{deviceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "device",
+                "{{deviceId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "03 Telemetry",
+      "item": [
+        {
+          "name": "TELEMETRY-001 Get latest telemetry",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询最新遥测返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"返回三个遥测字段\", function () {\r\n    pm.expect(body.temperature).to.be.an(\"array\").that.is.not.empty;\r\n    pm.expect(body.temperatureF).to.be.an(\"array\").that.is.not.empty;\r\n    pm.expect(body.humidity).to.be.an(\"array\").that.is.not.empty;\r\n});\r\n\r\npm.test(\"最新遥测数据结构正确\", function () {\r\n    [\"temperature\", \"temperatureF\", \"humidity\"].forEach(function (key) {\r\n        pm.expect(body[key][0]).to.have.property(\"ts\");\r\n        pm.expect(body[key][0]).to.have.property(\"value\");\r\n        pm.expect(body[key][0].ts).to.be.a(\"number\");\r\n    });\r\n});\r\n\r\npm.test(\"最新遥测值符合当前测试基线\", function () {\r\n    pm.expect(Number(body.temperature[0].value)).to.eql(50);\r\n    pm.expect(Number(body.temperatureF[0].value)).to.eql(68);\r\n    pm.expect(Number(body.humidity[0].value)).to.eql(66);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/plugins/telemetry/DEVICE/{{deviceId}}/values/timeseries?keys=temperature,temperatureF,humidity",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "plugins",
+                "telemetry",
+                "DEVICE",
+                "{{deviceId}}",
+                "values",
+                "timeseries"
+              ],
+              "query": [
+                {
+                  "key": "keys",
+                  "value": "temperature,temperatureF,humidity"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "TELEMETRY-002 Get temperature history",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const endTs=Date.now();\r\nconst startTs=endTs-30*24*60*60*1000;\r\n\r\npm.variables.set(\"startTs\",startTs);\r\npm.variables.set(\"endTs\",endTs);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询历史遥测返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\nconst points = Array.isArray(body.temperature)\r\n    ? body.temperature\r\n    : [];\r\n\r\npm.test(\"返回多个温度历史点\", function () {\r\n    pm.expect(points.length).to.be.above(1);\r\n});\r\n\r\npm.test(\"每个数据点包含时间和值\", function () {\r\n    points.forEach(function (point) {\r\n        pm.expect(point.ts).to.be.a(\"number\");\r\n        pm.expect(point).to.have.property(\"value\");\r\n    });\r\n});\r\n\r\npm.test(\"历史点按时间升序排列\", function () {\r\n    for (let i = 1; i < points.length; i++) {\r\n        pm.expect(points[i].ts).to.be.at.least(points[i - 1].ts);\r\n    }\r\n});\r\n\r\npm.test(\"历史数据包含高温测试值\", function () {\r\n    const values = points.map(function (point) {\r\n        return Number(point.value);\r\n    });\r\n\r\n    pm.expect(values).to.include(50.1);\r\n    pm.expect(values).to.include(51);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/plugins/telemetry/DEVICE/{{deviceId}}/values/timeseries?keys=temperature&startTs={{startTs}}&endTs={{endTs}}&limit=1000&agg=NONE&orderBy=ASC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "plugins",
+                "telemetry",
+                "DEVICE",
+                "{{deviceId}}",
+                "values",
+                "timeseries"
+              ],
+              "query": [
+                {
+                  "key": "keys",
+                  "value": "temperature"
+                },
+                {
+                  "key": "startTs",
+                  "value": "{{startTs}}"
+                },
+                {
+                  "key": "endTs",
+                  "value": "{{endTs}}"
+                },
+                {
+                  "key": "limit",
+                  "value": "1000"
+                },
+                {
+                  "key": "agg",
+                  "value": "NONE"
+                },
+                {
+                  "key": "orderBy",
+                  "value": "ASC"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "04 Alarms",
+      "item": [
+        {
+          "name": "ALARM-001 Find device alarms",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询告警返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\nconst alarms = Array.isArray(body.data) ? body.data : [];\r\n\r\nconst targetAlarm = alarms.find(function (alarm) {\r\n    return alarm.type === \"High Temperature\" &&\r\n           alarm.severity === \"MAJOR\";\r\n});\r\n\r\npm.test(\"响应data为数组\", function () {\r\n    pm.expect(body.data).to.be.an(\"array\");\r\n});\r\n\r\npm.test(\"找到高温重要告警\", function () {\r\n    pm.expect(\r\n        targetAlarm,\r\n        \"未找到High Temperature重要告警\"\r\n    ).to.exist;\r\n});\r\n\r\npm.test(\"告警来源为目标设备\", function () {\r\n    pm.expect(targetAlarm, \"目标告警不存在\").to.exist;\r\n    pm.expect(targetAlarm.originator.id)\r\n        .to.eql(pm.environment.get(\"deviceId\"));\r\n});\r\n\r\npm.test(\"告警包含非空ID\", function () {\r\n    pm.expect(targetAlarm, \"目标告警不存在\").to.exist;\r\n    pm.expect(targetAlarm.id, \"告警缺少id对象\").to.exist;\r\n    pm.expect(targetAlarm.id.id).to.be.a(\"string\").and.not.empty;\r\n});\r\n\r\nif (targetAlarm && targetAlarm.id && targetAlarm.id.id) {\r\n    pm.environment.set(\"alarmId\", targetAlarm.id.id);\r\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alarm/DEVICE/{{deviceId}}?searchStatus=ANY&pageSize=50&page=0&sortProperty=createdTime&sortOrder=DESC&fetchOriginator=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alarm",
+                "DEVICE",
+                "{{deviceId}}"
+              ],
+              "query": [
+                {
+                  "key": "searchStatus",
+                  "value": "ANY"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "50"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "createdTime"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC"
+                },
+                {
+                  "key": "fetchOriginator",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ALARM-002 Get alarm by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询告警详情返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"告警ID与环境变量一致\", function () {\r\n    pm.expect(body.id.id)\r\n        .to.eql(pm.environment.get(\"alarmId\"));\r\n});\r\n\r\npm.test(\"告警类型和严重程度正确\", function () {\r\n    pm.expect(body.type).to.eql(\"High Temperature\");\r\n    pm.expect(body.severity).to.eql(\"MAJOR\");\r\n});\r\n\r\npm.test(\"告警来源为测试设备\", function () {\r\n    pm.expect(body.originator.id)\r\n        .to.eql(pm.environment.get(\"deviceId\"));\r\n});\r\n\r\npm.test(\"告警包含确认和清除状态\", function () {\r\n    pm.expect(body).to.have.property(\"acknowledged\");\r\n    pm.expect(body).to.have.property(\"cleared\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alarm/{{alarmId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alarm",
+                "{{alarmId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ALARM-003 Alarm not found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"不存在的告警返回404\",function(){\r\n    pm.response.to.have.status(404);\r\n});\r\n\r\nlet body={};\r\n\r\ntry{\r\n    body = pm.response.json();\r\n}catch(e){\r\n    body={};\r\n}\r\n\r\npm.test(\"错误响应未返回告警实体\", function () {\r\n    pm.expect(body.id).to.be.undefined;\r\n    pm.expect(body.type).to.be.undefined;\r\n});\r\n\r\npm.test(\"错误响应包含提示信息\", function () {\r\n    pm.expect(body.message).to.be.a(\"string\");\r\n    pm.expect(body.message).not.to.be.empty;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alarm/00000000-0000-0000-0000-000000000000",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alarm",
+                "00000000-0000-0000-0000-000000000000"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ALARM-004 Get alarm without JWT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"未认证访问告警返回401\", function () {\r\n    pm.response.to.have.status(401);\r\n});\r\n\r\nlet body = {};\r\n\r\ntry {\r\n    body = pm.response.json();\r\n} catch (e) {\r\n    body = {};\r\n}\r\n\r\npm.test(\"未返回告警实体\", function () {\r\n    pm.expect(body.id).to.be.undefined;\r\n    pm.expect(body.type).to.be.undefined;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": " application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/alarm/{{alarmId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alarm",
+                "{{alarmId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ALARM-005 Trigger high temperature alarm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"高温遥测上报返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"遥测接收成功且响应体为空\", function () {\r\n    pm.expect(pm.response.text().trim()).to.eql(\"\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": " application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"temperature\": 51\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{deviceToken}}/telemetry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "{{deviceToken}}",
+                "telemetry"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ALARM-006 Find new active alarm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"活动告警查询返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\nconst alarms = Array.isArray(body.data) ? body.data : [];\r\n\r\npm.test(\"响应data为数组\", function () {\r\n    pm.expect(alarms).to.be.an(\"array\");\r\n});\r\n\r\nconst targetAlarm = alarms.find(function (item) {\r\n    return item.type===\"High Temperature\"\r\n        && item.severity===\"MAJOR\"\r\n        && item.cleared===false; \r\n});\r\n\r\npm.test(\"找到新的活动高温告警\", function () {\r\n    pm.expect(targetAlarm).to.exist;\r\n    pm.expect(targetAlarm.id.id).to.be.a(\"string\").and.not.empty;\r\n});\r\n\r\npm.test(\"新告警初始状态为未确认且未清除\", function () {\r\n    pm.expect(targetAlarm.acknowledged).to.eql(false);\r\n    pm.expect(targetAlarm.cleared).to.eql(false);\r\n});\r\n\r\nif (targetAlarm && targetAlarm.id && targetAlarm.id.id) {\r\n    pm.environment.set(\"alarmId\", targetAlarm.id.id);\r\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alarm/DEVICE/{{deviceId}}?searchStatus=ACTIVE&pageSize=50&page=0&sortProperty=createdTime&sortOrder=DESC&fetchOriginator=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alarm",
+                "DEVICE",
+                "{{deviceId}}"
+              ],
+              "query": [
+                {
+                  "key": "searchStatus",
+                  "value": "ACTIVE"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "50"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "createdTime"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC"
+                },
+                {
+                  "key": "fetchOriginator",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ALARM-007 Acknowledge alarm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"确认告警返回200\",function(){\r\n    pm.response.to.have.status(200);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alarm/{{alarmId}}/ack",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alarm",
+                "{{alarmId}}",
+                "ack"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ALARM-008 Verify acknowledge alarm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询确认后的告警返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"告警ID正确\", function () {\r\n    pm.expect(body.id.id)\r\n        .to.eql(pm.environment.get(\"alarmId\"));\r\n});\r\n\r\npm.test(\"告警已经确认\", function () {\r\n    pm.expect(body.acknowledged).to.eql(true);\r\n});\r\n\r\npm.test(\"告警尚未清除\", function () {\r\n    pm.expect(body.cleared).to.eql(false);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alarm/{{alarmId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alarm",
+                "{{alarmId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ALARM-009 Restore temperature and clear alarm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"恢复温度上报返回200\",function(){\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\npm.test(\"遥测接收成功且响应体为空\",function(){\r\n    pm.expect(pm.response.text().trim()).to.eql(\"\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": " application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"temperature\": 50\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/{{deviceToken}}/telemetry",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "{{deviceToken}}",
+                "telemetry"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ALARM-010 Verify cleared alarm",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询清除后的告警返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"告警ID正确\", function () {\r\n    pm.expect(body.id.id)\r\n        .to.eql(pm.environment.get(\"alarmId\"));\r\n});\r\n\r\npm.test(\"告警保持已确认状态\", function () {\r\n    pm.expect(body.acknowledged).to.eql(true);\r\n});\r\n\r\npm.test(\"告警已经自动清除\", function () {\r\n    pm.expect(body.cleared).to.eql(true);\r\n});\r\n\r\npm.test(\"告警包含有效清除时间\", function () {\r\n    pm.expect(body.clearTs).to.be.a(\"number\");\r\n    pm.expect(body.clearTs).to.be.above(0);\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alarm/{{alarmId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alarm",
+                "{{alarmId}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "05 Assert and Relations",
+      "item": [
+        {
+          "name": "ASSET-001 Search asset by name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询资产返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\nconst assets = Array.isArray(body.data) ? body.data : [];\r\n\r\npm.test(\"响应data为数组\", function () {\r\n    pm.expect(assets).to.be.an(\"array\");\r\n});\r\n\r\nconst targetAsset = assets.find(function (item) {\r\n    return item.name === \"QA_FACTORY_001\";\r\n});\r\n\r\npm.test(\"找到目标测试资产\", function () {\r\n    pm.expect(targetAsset).to.exist;\r\n});\r\n\r\npm.test(\"目标资产包含非空ID\", function () {\r\n    pm.expect(targetAsset.id.id).to.be.a(\"string\").and.not.empty;\r\n});\r\n\r\nif (targetAsset && targetAsset.id && targetAsset.id.id) {\r\n    pm.environment.set(\"assetId\", targetAsset.id.id);\r\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tenant/assets?pageSize=10&page=0&textSearch=QA_FACTORY_001&sortProperty=createdTime&sortOrder=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tenant",
+                "assets"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "textSearch",
+                  "value": "QA_FACTORY_001"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "createdTime"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ASSET-002 Get asset by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询资产详情返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"资产名称正确\", function () {\r\n    pm.expect(body.name).to.eql(\"QA_FACTORY_001\");\r\n});\r\n\r\npm.test(\"资产ID与环境变量一致\", function () {\r\n    pm.expect(body.id.id)\r\n        .to.eql(pm.environment.get(\"assetId\"));\r\n});\r\n\r\npm.test(\"响应包含资产配置ID\", function () {\r\n    pm.expect(body.assetProfileId.id)\r\n        .to.be.a(\"string\").and.not.empty;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/asset/{{assetId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "asset",
+                "{{assetId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ASSET-003 Get asset outbound relations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询资产向外关系返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst relations = pm.response.json();\r\n\r\npm.test(\"关系响应为数组\", function () {\r\n    pm.expect(relations).to.be.an(\"array\");\r\n});\r\n\r\nconst targetRelation = relations.find(function (item) {\r\n    return item.type === \"Contains\"\r\n        && item.to.entityType === \"DEVICE\"\r\n        && item.to.id === pm.environment.get(\"deviceId\");\r\n});\r\n\r\npm.test(\"找到资产包含设备的关系\", function () {\r\n    pm.expect(targetRelation).to.exist;\r\n});\r\n\r\npm.test(\"关系起点和终点正确\", function () {\r\n    pm.expect(targetRelation).to.exist;\r\n    pm.expect(targetRelation.from.entityType).to.eql(\"ASSET\");\r\n    pm.expect(targetRelation.from.id)\r\n        .to.eql(pm.environment.get(\"assetId\"));\r\n    pm.expect(targetRelation.to.entityType).to.eql(\"DEVICE\");\r\n    pm.expect(targetRelation.to.id)\r\n        .to.eql(pm.environment.get(\"deviceId\"));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relations?fromId={{assetId}}&fromType=ASSET&relationTypeGroup=COMMON",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relations"
+              ],
+              "query": [
+                {
+                  "key": "fromId",
+                  "value": "{{assetId}}"
+                },
+                {
+                  "key": "fromType",
+                  "value": "ASSET"
+                },
+                {
+                  "key": "relationTypeGroup",
+                  "value": "COMMON"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ASSET-004 Get device inbound relations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询设备向内关系返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst relations = pm.response.json();\r\n\r\npm.test(\"关系响应为数组\", function () {\r\n    pm.expect(relations).to.be.an(\"array\");\r\n});\r\n\r\nconst targetRelation = relations.find(function (item) {\r\n    return item.type === \"Contains\"\r\n        && item.from.entityType === \"ASSET\"\r\n        && item.from.id === pm.environment.get(\"assetId\");\r\n});\r\n\r\npm.test(\"找到来源资产的Contains关系\", function () {\r\n    pm.expect(targetRelation).to.exist;\r\n});\r\n\r\npm.test(\"关系起点和终点正确\", function () {\r\n    pm.expect(targetRelation).to.exist;\r\n    pm.expect(targetRelation.from.entityType).to.eql(\"ASSET\");\r\n    pm.expect(targetRelation.from.id)\r\n        .to.eql(pm.environment.get(\"assetId\"));\r\n    pm.expect(targetRelation.to.entityType).to.eql(\"DEVICE\");\r\n    pm.expect(targetRelation.to.id)\r\n        .to.eql(pm.environment.get(\"deviceId\"));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relations?toId={{deviceId}}&toType=DEVICE&relationTypeGroup=COMMON",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relations"
+              ],
+              "query": [
+                {
+                  "key": "fromId",
+                  "value": "{{assetId}}",
+                  "disabled": true
+                },
+                {
+                  "key": "fromType",
+                  "value": "ASSET",
+                  "disabled": true
+                },
+                {
+                  "key": "toId",
+                  "value": "{{deviceId}}"
+                },
+                {
+                  "key": "toType",
+                  "value": "DEVICE"
+                },
+                {
+                  "key": "relationTypeGroup",
+                  "value": "COMMON"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ASSET-005 Asset has no relations",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"不存在的资产查询关系返回404\", function () {\r\n    pm.response.to.have.status(404);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"错误响应未返回关系数组\", function () {\r\n    pm.expect(body).to.be.an(\"object\");\r\n    pm.expect(body).not.to.be.an(\"array\");\r\n});\r\n\r\npm.test(\"错误响应包含资产不存在提示\", function () {\r\n    pm.expect(body.message).to.be.a(\"string\").and.not.empty;\r\n    pm.expect(body.message.toLowerCase()).to.include(\"not found\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relations?fromId=00000000-0000-0000-0000-000000000000&fromType=ASSET&relationTypeGroup=COMMON",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relations"
+              ],
+              "query": [
+                {
+                  "key": "fromId",
+                  "value": "00000000-0000-0000-0000-000000000000"
+                },
+                {
+                  "key": "fromType",
+                  "value": "ASSET"
+                },
+                {
+                  "key": "relationTypeGroup",
+                  "value": "COMMON"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ASSET-006 Get relations without JWT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"未认证查询实体关系返回401\", function () {\r\n    pm.response.to.have.status(401);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"未返回实体关系数组\", function () {\r\n    pm.expect(body).to.be.an(\"object\");\r\n    pm.expect(body).not.to.be.an(\"array\");\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/relations?fromId={{assetId}}&fromType=ASSET&relationTypeGroup=COMMON",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "relations"
+              ],
+              "query": [
+                {
+                  "key": "fromId",
+                  "value": "{{assetId}}"
+                },
+                {
+                  "key": "fromType",
+                  "value": "ASSET"
+                },
+                {
+                  "key": "relationTypeGroup",
+                  "value": "COMMON"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "06 Customers and Permissions",
+      "item": [
+        {
+          "name": "CUSTOMER-001 Search customer by name",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询客户返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\nconst customers = Array.isArray(body.data) ? body.data : [];\r\n\r\npm.test(\"响应data为数组\", function () {\r\n    pm.expect(customers).to.be.an(\"array\");\r\n});\r\n\r\nconst targetCustomer = customers.find(function (item) {\r\n    return item.title === \"QA_CUSTOMER_001\";\r\n});\r\n\r\npm.test(\"找到目标测试客户\", function () {\r\n    pm.expect(targetCustomer).to.exist;\r\n});\r\n\r\npm.test(\"目标客户包含非空ID\", function () {\r\n    pm.expect(targetCustomer.id.id).to.be.a(\"string\").and.not.empty;\r\n});\r\n\r\nif (targetCustomer && targetCustomer.id && targetCustomer.id.id) {\r\n    pm.environment.set(\"customerId\", targetCustomer.id.id);\r\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": " application/json",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers?pageSize=10&page=0&textSearch=QA_CUSTOMER_001&sortProperty=createdTime&sortOrder=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "textSearch",
+                  "value": "QA_CUSTOMER_001"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "createdTime"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CUSTOMER-002 Get customer by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询客户详情返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"客户名称正确\", function () {\r\n    pm.expect(body.title).to.eql(\"QA_CUSTOMER_001\");\r\n});\r\n\r\npm.test(\"客户ID正确\", function () {\r\n    pm.expect(body.id.id)\r\n        .to.eql(pm.environment.get(\"customerId\"));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customer/{{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "customer",
+                "{{customerId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CUSTOMER-003 Get customer assets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询客户资产返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\nconst assets = Array.isArray(body.data) ? body.data : [];\r\n\r\npm.test(\"响应data为数组\", function () {\r\n    pm.expect(assets).to.be.an(\"array\");\r\n});\r\n\r\nconst targetAsset = assets.find(function (item) {\r\n    return item.name === \"QA_FACTORY_001\";\r\n});\r\n\r\npm.test(\"客户拥有测试资产\", function () {\r\n    pm.expect(targetAsset).to.exist;\r\n});\r\n\r\npm.test(\"资产ID正确\", function () {\r\n    pm.expect(targetAsset).to.exist;\r\n    pm.expect(targetAsset.id.id)\r\n        .to.eql(pm.environment.get(\"assetId\"));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": " application/json",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/customer/{{customerId}}/assets?pageSize=10&page=0&textSearch=QA_FACTORY_001&sortProperty=createdTime&sortOrder=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "customer",
+                "{{customerId}}",
+                "assets"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "textSearch",
+                  "value": "QA_FACTORY_001"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "createdTime"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CUSTOMER-004 Get customer devices",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询客户设备返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\nconst devices = Array.isArray(body.data) ? body.data : [];\r\n\r\npm.test(\"响应data为数组\", function () {\r\n    pm.expect(devices).to.be.an(\"array\");\r\n});\r\n\r\nconst targetDevice = devices.find(function (item) {\r\n    return item.name === \"QA_TEMP_DEVICE_001\";\r\n});\r\n\r\npm.test(\"客户拥有测试设备\", function () {\r\n    pm.expect(targetDevice).to.exist;\r\n});\r\n\r\npm.test(\"设备ID正确\", function () {\r\n    pm.expect(targetDevice).to.exist;\r\n    pm.expect(targetDevice.id.id)\r\n        .to.eql(pm.environment.get(\"deviceId\"));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": " application/json",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/customer/{{customerId}}/devices?pageSize=10&page=0&textSearch=QA_TEMP_DEVICE_001&sortProperty=createdTime&sortOrder=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "customer",
+                "{{customerId}}",
+                "devices"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "textSearch",
+                  "value": "QA_TEMP_DEVICE_001"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "createdTime"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CUSTOMER-005 Get customer dashboards",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询客户仪表板返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\nconst dashboards = Array.isArray(body.data) ? body.data : [];\r\n\r\npm.test(\"响应data为数组\", function () {\r\n    pm.expect(dashboards).to.be.an(\"array\");\r\n});\r\n\r\nconst targetDashboard = dashboards.find(function (item) {\r\n    return item.title === \"QA_TEMPERATURE_DASHBOARD\";\r\n});\r\n\r\npm.test(\"客户拥有测试仪表板\", function () {\r\n    pm.expect(targetDashboard).to.exist;\r\n});\r\n\r\npm.test(\"仪表板ID非空\", function () {\r\n    pm.expect(targetDashboard).to.exist;\r\n    pm.expect(targetDashboard.id.id)\r\n        .to.be.a(\"string\").and.not.empty;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": " application/json",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/customer/{{customerId}}/dashboards?pageSize=10&page=0&textSearch=QA_TEMPERATURE_DASHBOARD&sortProperty=createdTime&sortOrder=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "customer",
+                "{{customerId}}",
+                "dashboards"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "textSearch",
+                  "value": "QA_TEMPERATURE_DASHBOARD"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "createdTime"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CUSTOMER-006 Get customer without JWT",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"未认证查询客户返回401\", function () {\r\n    pm.response.to.have.status(401);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"未返回客户实体\", function () {\r\n    pm.expect(body.id).to.be.undefined;\r\n    pm.expect(body.title).to.be.undefined;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/customer/{{customerId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "customer",
+                "{{customerId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CUSTOMER-007 Customer user login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"客户用户登录返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"客户用户响应包含非空JWT\", function () {\r\n    pm.expect(body.token).to.be.a(\"string\").and.not.empty;\r\n});\r\n\r\nif (body.token) {\r\n    pm.environment.set(\"customerJwt\", body.token);\r\n}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\r\n  \"username\": \"{{customerUsername}}\",\r\n  \"password\": \"{{customerPassword}}\"\r\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CUSTOMER-008 Get customer user profile",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"查询客户用户身份返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"用户角色为CUSTOMER_USER\", function () {\r\n    pm.expect(body.authority).to.eql(\"CUSTOMER_USER\");\r\n});\r\n\r\npm.test(\"客户用户邮箱正确\", function () {\r\n    pm.expect(body.email)\r\n        .to.eql(pm.environment.get(\"customerUsername\"));\r\n});\r\n\r\npm.test(\"用户所属客户正确\", function () {\r\n    pm.expect(body.customerId.id)\r\n        .to.eql(pm.environment.get(\"customerId\"));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerJwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "disabled": true
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/user",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "user"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CUSTOMER-009 Access assigned device",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"客户用户查询已授权设备返回200\", function () {\r\n    pm.response.to.have.status(200);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"返回测试设备\", function () {\r\n    pm.expect(body.name).to.eql(\"QA_TEMP_DEVICE_001\");\r\n});\r\n\r\npm.test(\"设备ID正确\", function () {\r\n    pm.expect(body.id.id)\r\n        .to.eql(pm.environment.get(\"deviceId\"));\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerJwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/device/{{deviceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "device",
+                "{{deviceId}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CUSTOMER-010 Customer user cannot list customers",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"客户用户查询客户列表返回403\", function () {\r\n    pm.response.to.have.status(403);\r\n});\r\n\r\nconst body = pm.response.json();\r\n\r\npm.test(\"未返回客户列表数据\", function () {\r\n    pm.expect(body.data).to.be.undefined;\r\n});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{customerJwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": " application/json",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers?pageSize=10&page=0&textSearch=QA_CUSTOMER_001&sortProperty=createdTime&sortOrder=DESC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "textSearch",
+                  "value": "QA_CUSTOMER_001"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "createdTime"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

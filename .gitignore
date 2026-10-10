@@ -1,0 +1,50 @@
+# Local secrets - never commit
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+*.p12
+*.jks
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Test report temporary data
+allure-results/
+allure-report/
+reports/
+reports/raw/
+downloads/
+
+# Tool caches and Jenkins temporary workspaces
+postman/.cache/
+postman/reports/
+api-automation-python@tmp/
+
+# Machine-specific API client environments
+*.local.json
+
+# IDE / OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Runtime data and logs must not enter the test project repository
+data/
+logs/
+*.log
+
+# Screenshots containing accounts, tokens, entity IDs or other private data
+evidence/private/
+evidence/screenshots/*credential*
+evidence/screenshots/*token*
+
