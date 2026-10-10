@@ -20,6 +20,8 @@ pipeline {
         PYTHONUTF8 = '1'
         PYTHON_BOOTSTRAP = 'C:\\Users\\dolphin\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
         PIP_CACHE_DIR = 'D:\\toolsoft\\python-cache'
+        PIP_INDEX_URL = 'https://pypi.org/simple'
+        PIP_DISABLE_PIP_VERSION_CHECK = '1'
         PATH = "D:\\toolsoft\\nodejs\\node_global;D:\\toolsoft\\nodejs;${env.PATH}"
     }
 
@@ -39,7 +41,7 @@ if not exist ".venv\\Scripts\\python.exe" (
   if errorlevel 1 exit /b 3
 )
 
-.venv\\Scripts\\python.exe -m pip install --disable-pip-version-check --cache-dir "%PIP_CACHE_DIR%" -r requirements.txt
+.venv\\Scripts\\python.exe -m pip install --index-url "%PIP_INDEX_URL%" --cache-dir "%PIP_CACHE_DIR%" -r requirements.txt
 if errorlevel 1 exit /b 4
                     '''
                 }
@@ -97,20 +99,29 @@ powershell.exe -NoProfile -Command ^
 
     post {
         always {
-            junit(
-                allowEmptyResults: true,
-                testResults: 'api-automation-python/reports/pytest-results.xml'
-            )
+            script {
+                if (fileExists('api-automation-python/reports/pytest-results.xml')) {
+                    junit(
+                        testResults: 'api-automation-python/reports/pytest-results.xml'
+                    )
+                } else {
+                    echo '未生成 JUnit XML；测试可能尚未开始，请先查看更早的构建错误。'
+                }
 
-            archiveArtifacts(
-                allowEmptyArchive: true,
-                artifacts: 'api-automation-python/allure-results/**, api-automation-python/allure-report/**, api-automation-python/reports/*.xml'
-            )
+                archiveArtifacts(
+                    allowEmptyArchive: true,
+                    artifacts: 'api-automation-python/allure-results/**, api-automation-python/allure-report/**, api-automation-python/reports/*.xml'
+                )
 
-            allure(
-                includeProperties: false,
-                results: [[path: 'api-automation-python/allure-results']]
-            )
+                if (fileExists('api-automation-python/allure-results')) {
+                    allure(
+                        includeProperties: false,
+                        results: [[path: 'api-automation-python/allure-results']]
+                    )
+                } else {
+                    echo '未生成 Allure Results；跳过 Allure 发布。'
+                }
+            }
         }
 
         success {
