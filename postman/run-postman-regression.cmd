@@ -2,16 +2,17 @@
 setlocal
 
 rem 运行本地 Postman 接口回归，并生成不带日期的本地报告。
-rem 可以在执行前设置 POSTMAN_CLI，覆盖下面的默认安装位置。
+rem 默认从 PATH 查找 postman.cmd；也可以在执行前设置 POSTMAN_CLI 覆盖。
 
-if not defined POSTMAN_CLI set "POSTMAN_CLI=D:\toolsoft\nodejs\node_global\postman.cmd"
+if not defined POSTMAN_CLI set "POSTMAN_CLI=postman.cmd"
 
 set "SCRIPT_DIR=%~dp0"
 set "COLLECTION=%SCRIPT_DIR%ThingsBoard_REST_API_Tests.postman_collection.json"
 set "ENVIRONMENT=%SCRIPT_DIR%ThingsBoard_Local.postman_environment.local.json"
 set "REPORT_DIR=%SCRIPT_DIR%reports"
 
-if not exist "%POSTMAN_CLI%" (
+where "%POSTMAN_CLI%" >nul 2>nul
+if errorlevel 1 if not exist "%POSTMAN_CLI%" (
     echo [ERROR] Postman CLI not found: %POSTMAN_CLI%
     echo Set POSTMAN_CLI to the full path of postman.cmd and try again.
     exit /b 2
