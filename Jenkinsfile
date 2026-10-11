@@ -17,6 +17,10 @@ pipeline {
         TB_ALARM_TRIGGER_TEMPERATURE = '80'
         TB_ALARM_RECOVERY_TEMPERATURE = '0'
         TB_ALARM_WAIT_SECONDS = '30'
+        TB_DEVICE_NAME = 'QA_TEMP_DEVICE_001'
+        UI_BROWSER = 'chrome'
+        UI_HEADLESS = 'true'
+        UI_TIMEOUT = '15'
         PYTHONUTF8 = '1'
         PYTHON_BOOTSTRAP = 'C:\\Users\\dolphin\\AppData\\Local\\Programs\\Python\\Python312\\python.exe'
         PIP_CACHE_DIR = 'D:\\toolsoft\\python-cache'
@@ -26,7 +30,7 @@ pipeline {
     }
 
     stages {
-        stage('准备 Python 环境') {
+        stage('准备自动化环境') {
             steps {
                 dir('api-automation-python') {
                     bat '''
@@ -42,6 +46,24 @@ if not exist ".venv\\Scripts\\python.exe" (
 )
 
 .venv\\Scripts\\python.exe -m pip install --index-url "%PIP_INDEX_URL%" --cache-dir "%PIP_CACHE_DIR%" -r requirements.txt
+if errorlevel 1 exit /b 4
+                    '''
+                }
+
+                dir('ui-automation-python') {
+                    bat '''
+@echo off
+if not exist "%PYTHON_BOOTSTRAP%" (
+  echo [ERROR] Bootstrap Python does not exist: %PYTHON_BOOTSTRAP%
+  exit /b 2
+)
+
+if not exist ".venv\Scripts\python.exe" (
+  "%PYTHON_BOOTSTRAP%" -m venv .venv
+  if errorlevel 1 exit /b 3
+)
+
+.venv\Scripts\python.exe -m pip install --index-url "%PIP_INDEX_URL%" --cache-dir "%PIP_CACHE_DIR%" -r requirements.txt
 if errorlevel 1 exit /b 4
                     '''
                 }
@@ -72,6 +94,22 @@ powershell.exe -NoProfile -Command ^
   "$response = Invoke-WebRequest -Uri '%TB_BASE_URL%/login' -UseBasicParsing -TimeoutSec 10; if ($response.StatusCode -ne 200) { exit 4 }"
                     '''
                 }
+
+                dir('ui-automation-python') {
+                    bat '''
+@echo off
+if not exist ".venv\Scripts\python.exe" (
+  echo [ERROR] UI Python virtual environment does not exist.
+  exit /b 2
+)
+
+.venv\Scripts\python.exe --version
+.venv\Scripts\python.exe -m pip check
+
+powershell.exe -NoProfile -Command ^
+  "$candidates = @((Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'), (Join-Path ${env:ProgramFiles(x86)} 'Google\Chrome\Application\chrome.exe'), (Join-Path $env:LOCALAPPDATA 'Google\Chrome\Application\chrome.exe')); $chrome = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1; if (-not $chrome) { Write-Error 'Chrome executable was not found.'; exit 3 }; Write-Host ('Chrome: ' + $chrome)"
+                    '''
+                }
             }
         }
 
@@ -95,6 +133,27 @@ powershell.exe -NoProfile -Command ^
                 }
             }
         }
+
+        stage('UI 冒烟') {
+            steps {
+                withCredentials([
+                    usernamePassword(
+                        credentialsId: 'thingsboard-tenant-admin',
+                        usernameVariable: 'TB_TENANT_USERNAME',
+                        passwordVariable: 'TB_TENANT_PASSWORD'
+                    ),
+                    usernamePassword(
+                        credentialsId: 'thingsboard-customer-user',
+                        usernameVariable: 'TB_CUSTOMER_USERNAME',
+                        passwordVariable: 'TB_CUSTOMER_PASSWORD'
+                    )
+                ]) {
+                    dir('ui-automation-python') {
+                        bat 'call run-ui-smoke.cmd'
+                    }
+                }
+            }
+        }
     }
 
     post {
@@ -108,15 +167,31 @@ powershell.exe -NoProfile -Command ^
                     echo '未生成 JUnit XML；测试可能尚未开始，请先查看更早的构建错误。'
                 }
 
+                if (fileExists('ui-automation-python/reports/pytest-results.xml')) {
+                    junit(
+                        testResults: 'ui-automation-python/reports/pytest-results.xml'
+                    )
+                } else {
+                    echo '未生成 UI JUnit XML；UI 测试可能未执行，请查看流水线阶段和控制台日志。'
+                }
+
                 archiveArtifacts(
                     allowEmptyArchive: true,
-                    artifacts: 'api-automation-python/allure-results/**, api-automation-python/allure-report/**, api-automation-python/reports/*.xml'
+                    artifacts: 'api-automation-python/allure-results/**, api-automation-python/allure-report/**, api-automation-python/reports/*.xml, ui-automation-python/allure-results/**, ui-automation-python/reports/**/*.xml, ui-automation-python/reports/screenshots/**'
                 )
 
+                def allureResultPaths = []
                 if (fileExists('api-automation-python/allure-results')) {
+                    allureResultPaths << [path: 'api-automation-python/allure-results']
+                }
+                if (fileExists('ui-automation-python/allure-results')) {
+                    allureResultPaths << [path: 'ui-automation-python/allure-results']
+                }
+
+                if (!allureResultPaths.isEmpty()) {
                     allure(
                         includeProperties: false,
-                        results: [[path: 'api-automation-python/allure-results']]
+                        results: allureResultPaths
                     )
                 } else {
                     echo '未生成 Allure Results；跳过 Allure 发布。'
@@ -125,11 +200,11 @@ powershell.exe -NoProfile -Command ^
         }
 
         success {
-            echo 'ThingsBoard API 回归通过。'
+            echo 'ThingsBoard API 回归与 UI 冒烟测试通过。'
         }
 
         unsuccessful {
-            echo 'ThingsBoard API 回归未通过，请查看 JUnit、Allure 和控制台日志。'
+            echo 'ThingsBoard 自动化回归未通过，请查看失败阶段、JUnit、Allure、截图和控制台日志。'
         }
     }
 }
