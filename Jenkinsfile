@@ -58,12 +58,12 @@ if not exist "%PYTHON_BOOTSTRAP%" (
   exit /b 2
 )
 
-if not exist ".venv\Scripts\python.exe" (
+if not exist ".venv\\Scripts\\python.exe" (
   "%PYTHON_BOOTSTRAP%" -m venv .venv
   if errorlevel 1 exit /b 3
 )
 
-.venv\Scripts\python.exe -m pip install --index-url "%PIP_INDEX_URL%" --cache-dir "%PIP_CACHE_DIR%" -r requirements.txt
+.venv\\Scripts\\python.exe -m pip install --index-url "%PIP_INDEX_URL%" --cache-dir "%PIP_CACHE_DIR%" -r requirements.txt
 if errorlevel 1 exit /b 4
                     '''
                 }
@@ -98,16 +98,16 @@ powershell.exe -NoProfile -Command ^
                 dir('ui-automation-python') {
                     bat '''
 @echo off
-if not exist ".venv\Scripts\python.exe" (
+if not exist ".venv\\Scripts\\python.exe" (
   echo [ERROR] UI Python virtual environment does not exist.
   exit /b 2
 )
 
-.venv\Scripts\python.exe --version
-.venv\Scripts\python.exe -m pip check
+.venv\\Scripts\\python.exe --version
+.venv\\Scripts\\python.exe -m pip check
 
 powershell.exe -NoProfile -Command ^
-  "$candidates = @((Join-Path $env:ProgramFiles 'Google\Chrome\Application\chrome.exe'), (Join-Path ${env:ProgramFiles(x86)} 'Google\Chrome\Application\chrome.exe'), (Join-Path $env:LOCALAPPDATA 'Google\Chrome\Application\chrome.exe')); $chrome = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1; if (-not $chrome) { Write-Error 'Chrome executable was not found.'; exit 3 }; Write-Host ('Chrome: ' + $chrome)"
+  "$candidates = @((Join-Path $env:ProgramFiles 'Google\\Chrome\\Application\\chrome.exe'), (Join-Path ${env:ProgramFiles(x86)} 'Google\\Chrome\\Application\\chrome.exe'), (Join-Path $env:LOCALAPPDATA 'Google\\Chrome\\Application\\chrome.exe')); $chrome = $candidates | Where-Object { Test-Path $_ } | Select-Object -First 1; if (-not $chrome) { Write-Error 'Chrome executable was not found.'; exit 3 }; Write-Host ('Chrome: ' + $chrome)"
                     '''
                 }
             }
