@@ -74,12 +74,16 @@ class DeviceClient:
             timeout=self.timeout,
         )
 
-    def get_credentials(self, device_id: str, token: str) -> requests.Response:
-        """读取设备凭据，用于取得该测试设备自己的访问令牌。"""
+    def get_credentials(
+        self,
+        device_id: str,
+        token: str | None = None,
+    ) -> requests.Response:
+        """读取设备凭据；token 为空时用于验证未认证访问。"""
 
         return self.session.get(
             f"{self.base_url}/api/device/{device_id}/credentials",
-            headers=self._jwt_header(token),
+            headers=self._jwt_header(token) if token else {},
             timeout=self.timeout,
         )
 
@@ -94,6 +98,15 @@ class DeviceClient:
         return self.session.get(
             f"{self.base_url}/api/device/{device_id}",
             headers=headers,
+            timeout=self.timeout,
+        )
+
+    def delete(self, device_id: str, token: str) -> requests.Response:
+        """删除测试设备，用于自动清理临时安全测试数据。"""
+
+        return self.session.delete(
+            f"{self.base_url}/api/device/{device_id}",
+            headers=self._jwt_header(token),
             timeout=self.timeout,
         )
 

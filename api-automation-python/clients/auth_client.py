@@ -28,12 +28,16 @@ class AuthClient:
             timeout=self.timeout,
         )
 
-    def get_current_user(self, token: str) -> requests.Response:
-        """使用 JWT 查询当前用户，验证 token 是否有效。"""
+    def get_current_user(self, token: str | None = None) -> requests.Response:
+        """查询当前用户；token 为空时用于验证未认证访问。"""
 
         return self.session.get(
             f"{self.base_url}/api/auth/user",
-            headers={"X-Authorization": f"Bearer {token}"},
+            headers=(
+                {"X-Authorization": f"Bearer {token}"}
+                if token
+                else {}
+            ),
             timeout=self.timeout,
         )
 

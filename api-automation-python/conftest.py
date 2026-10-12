@@ -26,6 +26,7 @@ ALLURE_FEATURES = {
     "test_assets": "05 资产管理",
     "test_relations": "06 实体关系",
     "test_customers_permissions": "07 客户与权限",
+    "test_security": "08 接口安全",
 }
 
 

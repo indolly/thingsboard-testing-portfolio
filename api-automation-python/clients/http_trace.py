@@ -18,6 +18,7 @@ _SENSITIVE_KEYS = {
     "token",
     "refreshtoken",
     "credentialsid",
+    "credentialsvalue",
     "deviceToken".lower(),
     "accesstoken",
 }

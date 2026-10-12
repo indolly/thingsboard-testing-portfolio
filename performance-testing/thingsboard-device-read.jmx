@@ -1,0 +1,339 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="ThingsBoard 设备读取性能基线">
+      <stringProp name="TestPlan.comments">登录和测试数据查询只执行一次；负载阶段只测按 ID 获取设备详情。</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <boolProp name="TestPlan.serialize_threadgroups">false</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments" guiclass="ArgumentsPanel" testclass="Arguments" testname="用户变量">
+        <collectionProp name="Arguments.arguments"/>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"/>
+    </TestPlan>
+    <hashTree>
+      <SetupThreadGroup guiclass="SetupThreadGroupGui" testclass="SetupThreadGroup" testname="准备认证和设备数据">
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.delayedStart">false</boolProp>
+        <boolProp name="ThreadGroup.scheduler">false</boolProp>
+        <stringProp name="ThreadGroup.duration"/>
+        <stringProp name="ThreadGroup.delay"/>
+        <stringProp name="ThreadGroup.on_sample_error">stoptest</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <stringProp name="LoopController.loops">1</stringProp>
+        </elementProp>
+      </SetupThreadGroup>
+      <hashTree>
+        <JSR223Sampler guiclass="TestBeanGUI" testclass="JSR223Sampler" testname="SETUP-001 读取并校验本地配置">
+          <stringProp name="scriptLanguage">groovy</stringProp>
+          <stringProp name="parameters"/>
+          <stringProp name="filename"/>
+          <stringProp name="cacheKey">true</stringProp>
+          <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+
+def environment = System.getenv()
+def projectRoot = props.get('projectRoot')
+if (!projectRoot) {
+    throw new IllegalStateException('缺少 -JprojectRoot，请使用 run-performance.cmd 执行。')
+}
+
+def localValues = [:]
+def localFile = new File(projectRoot, 'postman/ThingsBoard_Local.postman_environment.local.json')
+if (localFile.exists()) {
+    def document = new JsonSlurper().parse(localFile)
+    document.values.findAll { it.enabled != false }.each { item ->
+        if (item.key != null && item.value != null) {
+            localValues[item.key.toString()] = item.value.toString()
+        }
+    }
+}
+
+def firstValue = { String environmentName, List<String> postmanNames, String fallback = '' ->
+    def environmentValue = environment[environmentName]?.trim()
+    if (environmentValue) return environmentValue
+    for (String name : postmanNames) {
+        def value = localValues[name]?.trim()
+        if (value) return value
+    }
+    return fallback
+}
+
+def baseUrl = firstValue('TB_BASE_URL', ['baseUrl', 'baseurl']).replaceAll('/+$', '')
+def tenantUsername = firstValue('TB_TENANT_USERNAME', ['tenantUsername', 'username'])
+def tenantPassword = firstValue('TB_TENANT_PASSWORD', ['tenantPassword', 'password'])
+def deviceName = firstValue('TB_DEVICE_NAME', ['deviceName'], 'QA_TEMP_DEVICE_001')
+
+def missing = []
+if (!baseUrl) missing << 'TB_BASE_URL/baseUrl'
+if (!tenantUsername) missing << 'TB_TENANT_USERNAME/tenantUsername'
+if (!tenantPassword) missing << 'TB_TENANT_PASSWORD/tenantPassword'
+if (!deviceName) missing << 'TB_DEVICE_NAME/deviceName'
+if (!missing.isEmpty()) {
+    throw new IllegalStateException('性能测试配置缺少：' + missing.join(', '))
+}
+
+def uri = new URI(baseUrl)
+if (!uri.scheme || !uri.host) {
+    throw new IllegalStateException('baseUrl 格式错误，应类似 http://127.0.0.1:9091')
+}
+
+props.put('tbProtocol', uri.scheme)
+props.put('tbHost', uri.host)
+props.put('tbPort', (uri.port == -1 ? (uri.scheme == 'https' ? 443 : 80) : uri.port).toString())
+props.put('tenantUsername', tenantUsername)
+props.put('tenantPassword', tenantPassword)
+props.put('deviceName', deviceName)
+SampleResult.setResponseData('配置校验通过；秘密值未输出。', 'UTF-8')
+SampleResult.setSuccessful(true)
+          ]]></stringProp>
+        </JSR223Sampler>
+        <hashTree/>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="SETUP-002 租户管理员登录">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="参数">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{&quot;username&quot;:&quot;${__P(tenantUsername)}&quot;,&quot;password&quot;:&quot;${__P(tenantPassword)}&quot;}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${__P(tbHost)}</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(tbPort)}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${__P(tbProtocol)}</stringProp>
+          <stringProp name="HTTPSampler.contentEncoding">UTF-8</stringProp>
+          <stringProp name="HTTPSampler.path">/api/auth/login</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <boolProp name="HTTPSampler.DO_MULTIPART_POST">false</boolProp>
+          <stringProp name="HTTPSampler.embedded_url_re"/>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="登录请求头">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="Content-Type" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+              <elementProp name="Accept" elementType="Header">
+                <stringProp name="Header.name">Accept</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="提取 JWT">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+
+if (prev.responseCode != '200') {
+    prev.setSuccessful(false)
+    prev.setResponseMessage('登录失败，HTTP ' + prev.responseCode)
+    return
+}
+def body = new JsonSlurper().parseText(prev.responseDataAsString)
+if (!body.token) {
+    prev.setSuccessful(false)
+    prev.setResponseMessage('登录响应中没有 token')
+    return
+}
+props.put('jwtToken', body.token.toString())
+            ]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="SETUP-003 按名称查询测试设备">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="参数">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="pageSize" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                <stringProp name="Argument.name">pageSize</stringProp>
+                <stringProp name="Argument.value">10</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+              </elementProp>
+              <elementProp name="page" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                <stringProp name="Argument.name">page</stringProp>
+                <stringProp name="Argument.value">0</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+              </elementProp>
+              <elementProp name="textSearch" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                <stringProp name="Argument.name">textSearch</stringProp>
+                <stringProp name="Argument.value">${__P(deviceName)}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+              </elementProp>
+              <elementProp name="sortProperty" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                <stringProp name="Argument.name">sortProperty</stringProp>
+                <stringProp name="Argument.value">createdTime</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+              </elementProp>
+              <elementProp name="sortOrder" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">true</boolProp>
+                <stringProp name="Argument.name">sortOrder</stringProp>
+                <stringProp name="Argument.value">DESC</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <boolProp name="HTTPArgument.use_equals">true</boolProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${__P(tbHost)}</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(tbPort)}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${__P(tbProtocol)}</stringProp>
+          <stringProp name="HTTPSampler.path">/api/tenant/devices</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="认证请求头">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="X-Authorization" elementType="Header">
+                <stringProp name="Header.name">X-Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${__P(jwtToken)}</stringProp>
+              </elementProp>
+              <elementProp name="Accept" elementType="Header">
+                <stringProp name="Header.name">Accept</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree/>
+          <JSR223PostProcessor guiclass="TestBeanGUI" testclass="JSR223PostProcessor" testname="提取 deviceId">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+
+if (prev.responseCode != '200') {
+    prev.setSuccessful(false)
+    prev.setResponseMessage('设备查询失败，HTTP ' + prev.responseCode)
+    return
+}
+def body = new JsonSlurper().parseText(prev.responseDataAsString)
+def target = body.data?.find { it.name == props.get('deviceName') }
+def deviceId = target?.id?.id
+if (!deviceId) {
+    prev.setSuccessful(false)
+    prev.setResponseMessage('没有找到目标测试设备：' + props.get('deviceName'))
+    return
+}
+props.put('deviceId', deviceId.toString())
+            ]]></stringProp>
+          </JSR223PostProcessor>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="PERF-001 设备详情读取基线">
+        <stringProp name="ThreadGroup.on_sample_error">continue</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="循环控制器">
+          <boolProp name="LoopController.continue_forever">true</boolProp>
+          <stringProp name="LoopController.loops">-1</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">${__P(threads,5)}</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">${__P(rampSeconds,5)}</stringProp>
+        <boolProp name="ThreadGroup.same_user_on_next_iteration">true</boolProp>
+        <boolProp name="ThreadGroup.delayedStart">false</boolProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+        <stringProp name="ThreadGroup.duration">${__P(durationSeconds,30)}</stringProp>
+        <stringProp name="ThreadGroup.delay">0</stringProp>
+      </ThreadGroup>
+      <hashTree>
+        <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="负载请求头">
+          <collectionProp name="HeaderManager.headers">
+            <elementProp name="X-Authorization" elementType="Header">
+              <stringProp name="Header.name">X-Authorization</stringProp>
+              <stringProp name="Header.value">Bearer ${__P(jwtToken)}</stringProp>
+            </elementProp>
+            <elementProp name="Accept" elementType="Header">
+              <stringProp name="Header.name">Accept</stringProp>
+              <stringProp name="Header.value">application/json</stringProp>
+            </elementProp>
+          </collectionProp>
+        </HeaderManager>
+        <hashTree/>
+        <ConstantTimer guiclass="ConstantTimerGui" testclass="ConstantTimer" testname="用户思考时间">
+          <stringProp name="ConstantTimer.delay">${__P(pacingMs,1000)}</stringProp>
+        </ConstantTimer>
+        <hashTree/>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="PERF-001 GET /api/device/{deviceId}">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments" guiclass="HTTPArgumentsPanel" testclass="Arguments" testname="参数">
+            <collectionProp name="Arguments.arguments"/>
+          </elementProp>
+          <stringProp name="HTTPSampler.domain">${__P(tbHost)}</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(tbPort)}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${__P(tbProtocol)}</stringProp>
+          <stringProp name="HTTPSampler.path">/api/device/${__P(deviceId)}</stringProp>
+          <stringProp name="HTTPSampler.method">GET</stringProp>
+          <boolProp name="HTTPSampler.follow_redirects">true</boolProp>
+          <boolProp name="HTTPSampler.auto_redirects">false</boolProp>
+          <boolProp name="HTTPSampler.use_keepalive">true</boolProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">10000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="HTTP 状态码为 200">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="49586">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.custom_message">设备详情接口未返回 200</stringProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+            <intProp name="Assertion.test_type">8</intProp>
+          </ResponseAssertion>
+          <hashTree/>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="响应设备 ID 正确">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="parameters"/>
+            <stringProp name="filename"/>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script"><![CDATA[
+import groovy.json.JsonSlurper
+
+if (prev.responseCode != '200') return
+try {
+    def body = new JsonSlurper().parseText(prev.responseDataAsString)
+    def actualId = body?.id?.id?.toString()
+    def expectedId = props.get('deviceId')
+    if (actualId != expectedId) {
+        AssertionResult.setFailure(true)
+        AssertionResult.setFailureMessage('设备 ID 不一致')
+    }
+} catch (Exception ignored) {
+    AssertionResult.setFailure(true)
+    AssertionResult.setFailureMessage('响应不是有效的设备 JSON')
+}
+            ]]></stringProp>
+          </JSR223Assertion>
+          <hashTree/>
+        </hashTree>
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>

@@ -23,7 +23,8 @@ pytest.ini    Pytest与Allure分类配置
 | 资产 | 4 | 搜索、详情、不存在、未认证 |
 | 关系 | 5 | 精确关系、正向、反向、异常资源、未认证 |
 | 客户与权限 | 10 | 客户资源、客户用户身份和权限边界 |
-| **合计** | **34** | 核心REST API回归 |
+| 接口安全 | 8 | JWT篡改、敏感信息、设备凭据和对象级越权 |
+| **合计** | **42** | 核心REST API回归与基础安全检查 |
 
 ## 首次运行
 
@@ -53,6 +54,12 @@ python -m venv .venv
 .\run-asset-tests.cmd
 .\run-relation-tests.cmd
 .\run-customer-tests.cmd
+```
+
+只运行基础安全测试：
+
+```powershell
+.\.venv\Scripts\python.exe -m pytest tests\test_security.py -v
 ```
 
 也可以直接执行：
@@ -86,5 +93,6 @@ allure open .\allure-report
 - 已存在资源会校验，不随意修改或删除；
 - 测试失败时才向Allure附加HTTP交互；
 - 密码、JWT、Cookie和设备访问令牌会被脱敏；
+- 安全测试会临时创建设备验证对象级权限，并在测试结束时自动删除；
 - 真实`.env`和Postman本地环境不得提交。
 
