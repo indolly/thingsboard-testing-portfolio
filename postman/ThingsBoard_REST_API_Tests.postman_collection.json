@@ -279,6 +279,64 @@
           "response": []
         },
         {
+          "name": "DEVICE-024 Invalid sort property",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tenant/devices?pageSize=10&page=0&sortProperty=notARealField&sortOrder=ASC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tenant",
+                "devices"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "notARealField"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "ASC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "DEVICE-002 Get device by ID",
           "event": [
             {
@@ -587,6 +645,62 @@
                 {
                   "key": "sortOrder",
                   "value": "DESC"
+                },
+                {
+                  "key": "fetchOriginator",
+                  "value": "true"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "ALARM-011 Invalid sort property",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/alarm/DEVICE/{{deviceId}}?searchStatus=ANY&pageSize=50&page=0&sortProperty=notARealField&sortOrder=ASC&fetchOriginator=true",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "alarm",
+                "DEVICE",
+                "{{deviceId}}"
+              ],
+              "query": [
+                {
+                  "key": "searchStatus",
+                  "value": "ANY"
+                },
+                {
+                  "key": "pageSize",
+                  "value": "50"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "notARealField"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "ASC"
                 },
                 {
                   "key": "fetchOriginator",
@@ -1076,6 +1190,53 @@
           "response": []
         },
         {
+          "name": "ASSET-014 Invalid sort property",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/tenant/assets?pageSize=10&page=0&sortProperty=notARealField&sortOrder=ASC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tenant",
+                "assets"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "notARealField"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "ASC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
           "name": "ASSET-002 Get asset by ID",
           "event": [
             {
@@ -1396,6 +1557,69 @@
                 {
                   "key": "sortOrder",
                   "value": "DESC"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "CUSTOMER-011 Invalid sort property",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  ""
+                ]
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{jwt}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": " application/json",
+                "disabled": true
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/customers?pageSize=10&page=0&sortProperty=notARealField&sortOrder=ASC",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "customers"
+              ],
+              "query": [
+                {
+                  "key": "pageSize",
+                  "value": "10"
+                },
+                {
+                  "key": "page",
+                  "value": "0"
+                },
+                {
+                  "key": "sortProperty",
+                  "value": "notARealField"
+                },
+                {
+                  "key": "sortOrder",
+                  "value": "ASC"
                 }
               ]
             }

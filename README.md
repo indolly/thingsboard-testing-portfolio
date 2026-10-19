@@ -12,19 +12,20 @@
 
 | 测试层级 | 已验证成果 |
 |---|---|
-| 功能与业务流程 | 30条执行记录，覆盖设备、遥测、告警边界、仪表板、资产关系、权限和规则链 |
-| Postman接口测试 | 36个请求、117个断言，一次完整集合回归失败数为0 |
-| Python接口自动化 | 42条`pytest + requests`用例，覆盖8个业务模块 |
+| 功能与业务流程 | 136条正式功能用例，执行通过132条、失败4条；失败项归属于同一产品缺陷 |
+| Postman接口测试 | 36个回归请求、117个断言全部通过；另有4个手工缺陷复现请求 |
+| Python接口自动化 | 42条`pytest + requests`用例，覆盖8个业务模块并全部通过 |
 | UI自动化 | 6条`pytest + Playwright`冒烟用例，覆盖登录、设备查询和客户权限 |
 | JMeter性能测试 | 对只读设备详情接口执行10至800线程容量探索，全部0失败，定位400至800线程拐点区间 |
 | 测试数据 | 支持设备、资产、关系和客户资源的幂等检查或创建 |
 | 报告与诊断 | 输出JUnit XML和Allure结果；失败时附加脱敏后的请求与响应 |
-| 持续集成 | Jenkins Pipeline一次构建执行42条接口测试和6条UI冒烟测试，48条全部通过，并发布JUnit、Allure和构建产物 |
-| 版本管理 | 使用Git管理测试代码，通过GitHub私有仓库保存当前成果 |
+| 持续集成 | GitHub提交由Jenkins Poll SCM自动检测；Pipeline一次构建执行42条接口测试和6条UI冒烟测试，48条全部通过 |
+| 版本管理 | 使用Git管理测试代码，通过GitHub仓库保存当前成果 |
+| 产品缺陷 | 确认非法`sortProperty`导致设备、资产、客户和告警列表接口返回500；已完成手工复现、横向验证、日志定位与登记 |
 
 ## 核心测试设计
 
-- 使用`49.9 / 50 / 50.1`验证高温阈值边界，并验证告警自动清除。
+- 使用`49.9 / 50 / 50.1`验证告警创建边界（`temperature > 50`），使用`45.1 / 45`验证告警清除边界（`temperature <= 45`）。
 - 验证租户管理员和客户用户的水平、垂直权限边界。
 - 验证资产到设备的`Contains`关系及正向、反向查询。
 - 验证摄氏温度经规则链转换为华氏温度并持久化。
@@ -32,8 +33,18 @@
 - 验证JWT篡改、敏感凭据访问和已分配/未分配设备的对象级权限边界。
 - 使用JMeter逐级提高并发，通过吞吐增幅、平均响应、P95和容器CPU共同判断容量拐点。
 - 自动化执行前检查环境和测试数据，避免把环境问题误判为产品缺陷。
+- 对非法排序字段执行契约边界测试，通过设备、资产、客户和告警接口横向对比，确认参数未在控制器层拦截而进入数据库排序解析。
 
-详细测试策略见[测试策略](docs/TEST_STRATEGY.md)，执行结果见[测试报告](docs/TEST_REPORT.md)。
+正式用例见[功能测试用例](test-cases/ThingsBoard功能测试用例.xlsx)，详细测试策略见[测试策略](docs/TEST_STRATEGY.md)，执行结果见[测试报告](docs/TEST_REPORT.md)。
+
+## AI辅助测试实践
+
+- 根据Swagger接口文档和温度监控业务链路生成候选测试矩阵，再人工核对请求方法、参数、状态码、角色权限和业务预期，整理为可追溯的正式用例。
+- 辅助生成Postman断言、pytest客户端与用例骨架、Playwright页面对象和Jenkins Pipeline重复结构，再通过真实环境运行修正不符合产品行为的内容。
+- 对连接失败、无效URI、JWT校验、告警未恢复和Jenkins脚本转义等日志进行分类，提出排查路径，并使用接口响应、平台配置和重新执行结果验证原因。
+- 对AI生成内容执行接口文档一致性、敏感信息检查和实际运行三道校验；候选场景只有取得执行证据后才纳入正式用例成果。
+
+AI主要用于减少重复代码编写、测试点发散和日志检索时间，测试结论仍以接口文档、业务规则与实际执行证据为准。
 
 ## 性能测试结果
 
@@ -72,6 +83,8 @@ Git + GitHub
 test-project/
 ├─ README.md
 ├─ Jenkinsfile
+├─ test-cases/
+│  └─ ThingsBoard功能测试用例.xlsx
 ├─ docs/
 │  ├─ TEST_STRATEGY.md
 │  └─ TEST_REPORT.md
@@ -146,4 +159,6 @@ JTL、HTML报告和日志只保存在本机，不提交到Git。
 - [Jenkins流水线成功](evidence/screenshots/jenkins-build-success.png)
 - [Jenkins阶段视图](evidence/screenshots/jenkins-pipeline-overview.png)
 - [接口与UI自动化Allure总览](evidence/screenshots/allure-api-ui-regression-overview.png)
+- [Jenkins SCM自动触发](evidence/screenshots/jenkins-scm-auto-trigger.png)
+- [非法排序字段返回500](evidence/screenshots/invalid-sort-property-500.png)
 - [JMeter容量测试数据](performance-testing/capacity-comparison.txt)
